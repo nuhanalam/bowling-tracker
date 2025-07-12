@@ -1,0 +1,676 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Bowling Tracker</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
+  <style id="theme-style">
+    :root {
+      --bg-color: #1e1e1e;
+      --text-color: #f0f0f0;
+      --primary-color: #00bfff;
+      --card-bg: #2a2a2a;
+      --accent-color: #ff4c4c;
+      --btn-bg: #00bfff;
+      --btn-color: black;
+    }
+    body {
+      font-family: Arial, sans-serif;
+      background: var(--bg-color);
+      color: var(--text-color);
+      margin: 0; padding: 20px;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    h1 {
+      color: var(--primary-color);
+      margin-bottom: 10px;
+      text-align: center;
+    }
+    label {
+      font-weight: bold;
+      margin-right: 10px;
+    }
+    input[type="date"] {
+      padding: 5px;
+      font-size: 16px;
+      margin-bottom: 15px;
+      border-radius: 5px;
+      border: 1px solid #ccc;
+    }
+    input[type="number"] {
+      padding: 5px;
+      font-size: 16px;
+      border-radius: 5px;
+      border: 1px solid #ccc;
+      user-select: text;
+    }
+    .controls, .summary, .export-area {
+      margin: 15px 0;
+      text-align: center;
+      width: 100%;
+      max-width: 720px;
+    }
+    button {
+      background: var(--btn-bg);
+      color: var(--btn-color);
+      padding: 10px 15px;
+      border: none;
+      border-radius: 5px;
+      font-weight: bold;
+      cursor: pointer;
+      margin: 0 5px;
+      transition: background-color 0.3s;
+      user-select: none;
+    }
+    button:hover {
+      background-color: #0077aa;
+      color: #fff;
+    }
+    .balls-container {
+      display: flex;
+      justify-content: center;
+      gap: 12px;
+      margin-bottom: 10px;
+      flex-wrap: wrap;
+      max-width: 400px;
+      margin-left: auto;
+      margin-right: auto;
+    }
+    .ball {
+      width: 40px;
+      height: 40px;
+      background-color: #444;
+      border-radius: 50%;
+      line-height: 40px;
+      text-align: center;
+      user-select: none;
+      font-weight: bold;
+      color: var(--text-color);
+      cursor: pointer;
+      transition: background-color 0.3s;
+      border: 2px solid transparent;
+    }
+    .ball.wicket {
+      background-color: var(--accent-color);
+      color: white;
+      border-color: white;
+    }
+    .summary-box {
+      max-width: 720px;
+      background: var(--card-bg);
+      border-radius: 8px;
+      padding: 15px;
+      margin-top: 10px;
+      font-weight: bold;
+      box-shadow: 0 0 8px rgba(0,0,0,0.3);
+      margin-left: auto;
+      margin-right: auto;
+      cursor: default;
+      user-select: none;
+      min-height: 30px;
+    }
+    canvas {
+      max-width: 800px;
+      margin: 20px auto;
+      display: block;
+    }
+    /* THEME TOGGLE BUTTON in corner */
+    #themeToggleBtn {
+      position: fixed;
+      top: 15px;
+      right: 15px;
+      background: var(--btn-bg);
+      color: var(--btn-color);
+      border: none;
+      padding: 8px 12px;
+      font-size: 14px;
+      border-radius: 5px;
+      cursor: pointer;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+      z-index: 1000;
+      opacity: 0.7;
+      transition: opacity 0.3s;
+    }
+    #themeToggleBtn:hover {
+      opacity: 1;
+    }
+    /* REGISTER BUTTON top-left corner */
+    #registerBtn {
+      position: fixed;
+      top: 15px;
+      left: 15px;
+      background: var(--btn-bg);
+      color: var(--btn-color);
+      border: none;
+      padding: 8px 12px;
+      font-size: 14px;
+      border-radius: 5px;
+      cursor: pointer;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+      z-index: 1000;
+      opacity: 0.7;
+      transition: opacity 0.3s;
+      user-select: none;
+    }
+    #registerBtn:hover {
+      opacity: 1;
+    }
+    /* REGISTER OPTIONS MENU */
+    #registerMenu {
+      position: fixed;
+      top: 55px;
+      left: 15px;
+      background: var(--card-bg);
+      border-radius: 8px;
+      padding: 8px 12px;
+      box-shadow: 0 0 8px rgba(0,0,0,0.5);
+      display: none;
+      flex-direction: column;
+      gap: 8px;
+      z-index: 1001;
+      user-select: none;
+    }
+    #registerMenu button {
+      width: 140px;
+      font-weight: normal;
+      padding: 6px 8px;
+    }
+    /* RESET BUTTONS area bottom */
+    .reset-area {
+      max-width: 720px;
+      margin: 10px auto 40px auto;
+      display: flex;
+      justify-content: center;
+      gap: 15px;
+      flex-wrap: wrap;
+    }
+    /* Responsive tweaks */
+    @media (max-width: 480px) {
+      .balls-container {
+        max-width: 300px;
+        gap: 8px;
+      }
+      .ball {
+        width: 35px;
+        height: 35px;
+        line-height: 35px;
+      }
+      #themeToggleBtn, #registerBtn {
+        padding: 6px 10px;
+        font-size: 12px;
+      }
+      #registerMenu {
+        width: 160px;
+        top: 50px;
+      }
+      .reset-area {
+        flex-direction: column;
+        gap: 8px;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <h1>🏏 Bowling Tracker</h1>
+
+  <!-- Register button top-left -->
+  <button id="registerBtn" title="Register Options">Register ▼</button>
+
+  <!-- Register options menu -->
+  <div id="registerMenu">
+    <button id="registerOverBtn">Register Over</button>
+    <button id="registerDayBtn">Register Day</button>
+    <button id="resetAllBtn" style="background:#ff4444; color:white;">Reset All Dates</button>
+  </div>
+
+  <!-- Theme toggle button top-right -->
+  <button id="themeToggleBtn" onclick="toggleTheme()" title="Toggle Light/Dark Theme">🌙</button>
+
+  <div>
+    <label for="datePicker">Select Date: </label>
+    <input type="date" id="datePicker" />
+  </div>
+
+  <div class="controls">
+    <button id="prevOverBtn">Previous Over</button>
+    <span id="overLabel">Over: 1</span>
+    <button id="nextOverBtn">Next Over</button>
+    
+    <!-- Jump to over input and button -->
+    <input type="number" id="jumpOverInput" min="1" placeholder="Over #" style="width: 70px; margin-left: 10px;" />
+    <button id="jumpOverBtn">Go</button>
+
+    <button id="endDayBtn" style="background:#ff4444; color:white; margin-left: 10px;">End Day</button>
+  </div>
+
+  <div class="balls-container" id="ballsContainer">
+    <!-- Balls will be generated here -->
+  </div>
+
+  <div class="summary">
+    <div id="summaryBox" class="summary-box"></div>
+  </div>
+
+  <div class="chart-area">
+    <canvas id="graphCanvas"></canvas>
+  </div>
+
+  <div class="export-area">
+    <button id="exportSummaryBtn">Export Summary PDF</button>
+    <button id="exportFullBtn">Export Full PDF</button>
+  </div>
+
+  <div class="reset-area">
+    <button id="restartOverBtn">Restart This Over</button>
+    <button id="deleteOverBtn" style="background:#ff6600; color:white;">Delete This Over</button>
+    <button id="restartDayBtn">Restart This Day</button>
+  </div>
+
+<script>
+  // THEME TOGGLE
+  const themeStyle = document.getElementById('theme-style');
+  let darkMode = true;
+  const themeToggleBtn = document.getElementById('themeToggleBtn');
+
+  function toggleTheme() {
+    darkMode = !darkMode;
+    if(darkMode) {
+      themeStyle.innerHTML = `
+        :root {
+          --bg-color: #1e1e1e;
+          --text-color: #f0f0f0;
+          --primary-color: #00bfff;
+          --card-bg: #2a2a2a;
+          --accent-color: #ff4c4c;
+          --btn-bg: #00bfff;
+          --btn-color: black;
+        }
+        body {
+          background: var(--bg-color);
+          color: var(--text-color);
+        }
+      `;
+      themeToggleBtn.textContent = '🌙';
+      themeToggleBtn.title = 'Switch to Light Theme';
+    } else {
+      themeStyle.innerHTML = `
+        :root {
+          --bg-color: #ffffff;
+          --text-color: #000000;
+          --primary-color: #0077cc;
+          --card-bg: #f1f1f1;
+          --accent-color: #e60000;
+          --btn-bg: #0077cc;
+          --btn-color: white;
+        }
+        body {
+          background: var(--bg-color);
+          color: var(--text-color);
+        }
+      `;
+      themeToggleBtn.textContent = '☀️';
+      themeToggleBtn.title = 'Switch to Dark Theme';
+    }
+    updateChartColors();
+  }
+
+  // DATA STRUCTURE
+  let sessionsData = JSON.parse(localStorage.getItem('sessionsData')) || {};
+
+  // UI Elements
+  const datePicker = document.getElementById('datePicker');
+  const ballsContainer = document.getElementById('ballsContainer');
+  const overLabel = document.getElementById('overLabel');
+  const prevOverBtn = document.getElementById('prevOverBtn');
+  const nextOverBtn = document.getElementById('nextOverBtn');
+  const endDayBtn = document.getElementById('endDayBtn');
+  const summaryBox = document.getElementById('summaryBox');
+
+  const registerBtn = document.getElementById('registerBtn');
+  const registerMenu = document.getElementById('registerMenu');
+  const registerOverBtn = document.getElementById('registerOverBtn');
+  const registerDayBtn = document.getElementById('registerDayBtn');
+  const resetAllBtn = document.getElementById('resetAllBtn');
+
+  const restartOverBtn = document.getElementById('restartOverBtn');
+  const deleteOverBtn = document.getElementById('deleteOverBtn');
+  const restartDayBtn = document.getElementById('restartDayBtn');
+
+  const jumpOverInput = document.getElementById('jumpOverInput');
+  const jumpOverBtn = document.getElementById('jumpOverBtn');
+
+  // Chart
+  const ctx = document.getElementById('graphCanvas').getContext('2d');
+  let chartInstance;
+
+  // State
+  let currentDate = '';
+  let currentOverIndex = 0;
+
+  // Initialize date to today or first saved day
+  function initDate() {
+    if(datePicker.value) {
+      currentDate = datePicker.value;
+    } else {
+      if(Object.keys(sessionsData).length > 0) {
+        currentDate = Object.keys(sessionsData)[0];
+        datePicker.value = currentDate;
+      } else {
+        const todayStr = new Date().toISOString().slice(0,10);
+        currentDate = todayStr;
+        datePicker.value = todayStr;
+      }
+    }
+  }
+
+  // Ensure current date exists in sessionsData
+  function ensureDateData() {
+    if(!sessionsData[currentDate]) {
+      sessionsData[currentDate] = [];
+      saveSessions();
+    }
+  }
+
+  // Save to localStorage
+  function saveSessions() {
+    localStorage.setItem('sessionsData', JSON.stringify(sessionsData));
+  }
+
+  // Load balls UI for current over
+  function loadBalls() {
+    ballsContainer.innerHTML = '';
+    ensureDateData();
+    const overs = sessionsData[currentDate];
+    if(currentOverIndex < 0) currentOverIndex = 0;
+    if(currentOverIndex >= overs.length) currentOverIndex = overs.length - 1;
+    if(overs.length === 0) {
+      overs.push({balls: Array(6).fill().map(() => ({wicket: 'No'}))});
+      currentOverIndex = 0;
+      saveSessions();
+    }
+    const over = overs[currentOverIndex];
+    overLabel.textContent = `Over: ${currentOverIndex + 1}`;
+
+    for(let i=0; i<6; i++) {
+      const ballDiv = document.createElement('div');
+      ballDiv.classList.add('ball');
+      if(over.balls[i].wicket === 'Yes') ballDiv.classList.add('wicket');
+      ballDiv.textContent = i+1;
+      ballDiv.title = 'Click to toggle wicket (No/Yes)';
+      ballDiv.onclick = () => {
+        over.balls[i].wicket = (over.balls[i].wicket === 'No') ? 'Yes' : 'No';
+        ballDiv.classList.toggle('wicket');
+        saveSessions();
+        updateSummary();
+        updateChart();
+      };
+      ballsContainer.appendChild(ballDiv);
+    }
+    updateSummary();
+  }
+
+  // Update summary box (ONLY current day data)
+  function updateSummary() {
+    const overs = sessionsData[currentDate] || [];
+
+    if(overs.length === 0 || overs.every(over => over.balls.every(ball => ball.wicket === 'No'))) {
+      summaryBox.textContent = `Date: ${currentDate} | Not Played`;
+      return;
+    }
+
+    let totalWickets = 0;
+    let totalBalls = 0;
+    let totalDotBalls = 0;
+
+    overs.forEach(over => {
+      over.balls.forEach(ball => {
+        totalBalls++;
+        if(ball.wicket === 'Yes') totalWickets++;
+        else totalDotBalls++;
+      });
+    });
+
+    summaryBox.textContent = `Date: ${currentDate} | Overs: ${overs.length} | Balls: ${totalBalls} | Wickets: ${totalWickets} | Dot Balls: ${totalDotBalls}`;
+  }
+
+  // Navigation buttons
+  prevOverBtn.onclick = () => {
+    if(currentOverIndex > 0) {
+      currentOverIndex--;
+      loadBalls();
+    }
+  };
+  nextOverBtn.onclick = () => {
+    const overs = sessionsData[currentDate];
+    if(currentOverIndex < overs.length - 1) {
+      currentOverIndex++;
+    } else {
+      overs.push({balls: Array(6).fill().map(() => ({wicket: 'No'}))});
+      currentOverIndex = overs.length - 1;
+      saveSessions();
+    }
+    loadBalls();
+  };
+
+  // Jump to over button with automatic empty over creation
+  jumpOverBtn.onclick = () => {
+    let target = parseInt(jumpOverInput.value);
+    if (isNaN(target) || target < 1) {
+      alert('Please enter a valid over number (1 or higher).');
+      return;
+    }
+    const overs = sessionsData[currentDate] || [];
+    if (target > overs.length) {
+      // Create empty overs up to target
+      for(let i = overs.length; i < target; i++) {
+        overs.push({balls: Array(6).fill().map(() => ({wicket: 'No'}))});
+      }
+      saveSessions();
+    }
+    currentOverIndex = target - 1;
+    loadBalls();
+    updateChart();
+  };
+
+  // End day button resets over to 0 but keeps data
+  endDayBtn.onclick = () => {
+    alert(`Ending day ${currentDate}. You can now pick another date or continue bowling.`);
+    currentOverIndex = 0;
+    loadBalls();
+    updateChart();
+  };
+
+  // Date change
+  datePicker.onchange = () => {
+    currentDate = datePicker.value;
+    if(!sessionsData[currentDate]) {
+      sessionsData[currentDate] = [];
+      saveSessions();
+    }
+    currentOverIndex = 0;
+    loadBalls();
+    updateChart();
+  };
+
+  // REGISTER BUTTON TOGGLE
+  registerBtn.onclick = () => {
+    if(registerMenu.style.display === 'flex') {
+      registerMenu.style.display = 'none';
+    } else {
+      registerMenu.style.display = 'flex';
+    }
+  };
+
+  // REGISTER MENU BUTTONS
+  registerOverBtn.onclick = () => {
+    alert(`Register Over clicked. This can be linked to custom logic if needed.`);
+    registerMenu.style.display = 'none';
+  };
+  registerDayBtn.onclick = () => {
+    alert(`Register Day clicked. This can be linked to custom logic if needed.`);
+    registerMenu.style.display = 'none';
+  };
+  resetAllBtn.onclick = () => {
+    if(confirm("Are you sure you want to reset ALL dates and data? This cannot be undone.")) {
+      sessionsData = {};
+      saveSessions();
+      // Reset date and over
+      const todayStr = new Date().toISOString().slice(0,10);
+      currentDate = todayStr;
+      datePicker.value = todayStr;
+      currentOverIndex = 0;
+      loadBalls();
+      updateChart();
+      registerMenu.style.display = 'none';
+    }
+  };
+
+  // RESTART OVER BUTTON resets current over wickets
+  restartOverBtn.onclick = () => {
+    if(confirm(`Restart entire over ${currentOverIndex+1} on ${currentDate}? This will erase wickets in this over.`)) {
+      const overs = sessionsData[currentDate];
+      if(overs && overs[currentOverIndex]) {
+        overs[currentOverIndex] = {balls: Array(6).fill().map(() => ({wicket: 'No'}))};
+        saveSessions();
+        loadBalls();
+        updateChart();
+      }
+    }
+  };
+
+  // DELETE OVER BUTTON - deletes the current over if there are multiple overs
+  deleteOverBtn.onclick = () => {
+    const overs = sessionsData[currentDate];
+    if(overs.length <= 1) {
+      alert('Cannot delete the only over. You must have at least one over.');
+      return;
+    }
+    if(confirm(`Delete entire over ${currentOverIndex+1} on ${currentDate}? This action cannot be undone.`)) {
+      overs.splice(currentOverIndex,1);
+      if(currentOverIndex >= overs.length) {
+        currentOverIndex = overs.length - 1;
+      }
+      saveSessions();
+      loadBalls();
+      updateChart();
+    }
+  };
+
+  // RESTART DAY BUTTON clears all overs of current date
+  restartDayBtn.onclick = () => {
+    if(confirm(`Restart entire day ${currentDate}? This will erase all overs and wickets.`)) {
+      sessionsData[currentDate] = [];
+      saveSessions();
+      currentOverIndex = 0;
+      loadBalls();
+      updateChart();
+    }
+  };
+
+  // Chart update
+  function updateChart() {
+    const overs = sessionsData[currentDate] || [];
+    const wicketsPerOver = overs.map(over => over.balls.filter(ball => ball.wicket === 'Yes').length);
+
+    if(chartInstance) {
+      chartInstance.destroy();
+    }
+    chartInstance = new Chart(ctx, {
+      type: 'bar',
+      data: {
+        labels: wicketsPerOver.map((_, i) => `Over ${i+1}`),
+        datasets: [{
+          label: 'Wickets per Over',
+          data: wicketsPerOver,
+          backgroundColor: darkMode ? 'rgba(0, 191, 255, 0.7)' : 'rgba(0, 119, 204, 0.7)',
+          borderColor: darkMode ? 'rgba(0, 191, 255, 1)' : 'rgba(0, 119, 204, 1)',
+          borderWidth: 1,
+          borderRadius: 4
+        }]
+      },
+      options: {
+        responsive: true,
+        scales: {
+          y: {
+            beginAtZero: true,
+            stepSize: 1,
+            max: 6
+          }
+        },
+        plugins: {
+          legend: { display: false }
+        }
+      }
+    });
+  }
+
+  // PDF EXPORT - Summary (compact)
+  const exportSummaryBtn = document.getElementById('exportSummaryBtn');
+  exportSummaryBtn.onclick = () => {
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF();
+    const overs = sessionsData[currentDate] || [];
+    const summaryData = overs.map((over, i) => {
+      const wickets = over.balls.filter(b => b.wicket === 'Yes').length;
+      const gotWicket = wickets > 0 ? 'Yes' : 'No';
+      return [i+1, wickets, gotWicket];
+    });
+    doc.setFontSize(16);
+    doc.text(`Bowling Summary - Date: ${currentDate}`, 14, 20);
+    doc.autoTable({
+      startY: 30,
+      head: [['Over', 'Wickets', 'Wicket Taken?']],
+      body: summaryData
+    });
+    doc.save(`Summary_${currentDate}.pdf`);
+  };
+
+  // PDF EXPORT - Full detail
+  const exportFullBtn = document.getElementById('exportFullBtn');
+  exportFullBtn.onclick = () => {
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF();
+    const overs = sessionsData[currentDate] || [];
+
+    doc.setFontSize(16);
+    doc.text(`Full Bowling Detail - Date: ${currentDate}`, 14, 20);
+
+    overs.forEach((over, i) => {
+      const startY = doc.lastAutoTable ? doc.lastAutoTable.finalY + 10 : 30;
+      const ballData = over.balls.map((ball, idx) => {
+        return [idx+1, ball.wicket];
+      });
+      doc.autoTable({
+        startY,
+        head: [[`Over ${i+1}`, 'Ball Number', 'Wicket']],
+        body: ballData.map(([ballNum, wicket]) => [ballNum, ballNum, wicket])
+      });
+    });
+
+    doc.save(`FullDetail_${currentDate}.pdf`);
+  };
+
+  // INITIALIZE
+  initDate();
+  loadBalls();
+  updateChart();
+
+  // Close register menu when clicking outside
+  document.addEventListener('click', e => {
+    if(!registerMenu.contains(e.target) && e.target !== registerBtn) {
+      registerMenu.style.display = 'none';
+    }
+  });
+
+</script>
+
+</body>
+</html>
